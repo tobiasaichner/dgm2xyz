@@ -10,7 +10,7 @@
 
 - Collect minimal representative DXF samples.
 - Define expected `.xyz` output.
-- Select a DXF reader library.
+- Validate whether the internal DXF reader is enough or whether a DXF reader library is needed.
 - Implement converter core for the first supported point block type.
 - Add automated tests around sample files.
 

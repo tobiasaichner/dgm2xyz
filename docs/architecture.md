@@ -14,13 +14,15 @@ GUI -> application service -> converter core -> CAD reader adapter
 
 ### GUI
 
-The GUI should stay simple:
+The GUI is a native Win32 desktop shell using Common Controls v6. It should stay simple:
 
 - Drag-and-drop area for one or more supported CAD files.
 - File picker as a secondary input method.
 - Processing list with status per file.
 - Output summary.
 - Settings only when they are required for real workflows.
+
+External GUI frameworks are intentionally avoided in the first implementation. The project favors fast startup, small deployment size, and a narrow Windows utility workflow over cross-platform UI reuse.
 
 ### Converter Core
 
@@ -33,7 +35,9 @@ The converter core should:
 
 ### CAD Reader Adapter
 
-Use an adapter around the selected DXF library so parser-specific details do not spread through the application.
+Use an adapter around DXF parsing so parser-specific details do not spread through the application.
+
+The first implementation uses a small internal ASCII DXF group-code reader for the narrow target case. This avoids early licensing and deployment decisions while real sample files are still unknown.
 
 The first milestone should support DXF only. DWG support should be investigated separately because libraries, licensing, and file compatibility vary significantly.
 
@@ -52,7 +56,7 @@ Recommended starting direction:
 
 - CMake project.
 - C++20 converter core.
-- Lightweight native GUI, likely Qt Widgets or another small native toolkit after evaluation.
-- Parser choice based on real sample files and licensing constraints.
+- Native Win32 GUI.
+- Internal DXF reader until real samples justify a third-party parser.
 
-No implementation dependency has been selected yet.
+No external implementation dependency has been selected yet.

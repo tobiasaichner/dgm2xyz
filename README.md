@@ -6,7 +6,12 @@ The goal is deliberately narrow: open a supported CAD file, extract point positi
 
 ## Status
 
-This repository is in project setup. No converter implementation exists yet.
+This repository contains the first native Windows implementation skeleton:
+
+- Native Win32 desktop GUI with drag-and-drop file intake.
+- C++20 converter core with deterministic `.xyz` writing.
+- Internal ASCII DXF reader for initial `POINT` and `INSERT` extraction.
+- Dependency-free core tests.
 
 ## Intended Workflow
 
@@ -50,11 +55,22 @@ No license has been selected yet.
 
 ## Development
 
-The implementation stack has not been committed yet. The current recommendation is a small native application with:
+The current implementation stack is:
 
 - CMake for builds.
-- C++ for the converter core.
-- A lightweight desktop GUI toolkit.
-- A DXF reader library selected after testing against real sample files.
+- C++20.
+- Native Win32 and Common Controls v6 for the desktop GUI.
+- No external GUI framework.
+- No third-party CAD library yet.
 
 See [architecture notes](docs/architecture.md) for the initial direction.
+
+### Build
+
+From a Visual Studio developer shell or another environment with a C++20 Windows compiler:
+
+```powershell
+cmake -S . -B build
+cmake --build build --config Release
+ctest --test-dir build -C Release
+```

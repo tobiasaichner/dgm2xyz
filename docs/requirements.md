@@ -37,3 +37,9 @@
 
 - DWG input support, including drag and drop, if it can be added without making the application heavy or legally complicated.
 - CLI mode for scripting, if useful after the GUI workflow is stable.
+
+## Development Requirements
+
+- Build with CMake and a C++20 Windows compiler.
+- Keep the GUI layer native Win32 unless there is a strong reason to revisit the decision.
+- Keep converter behavior testable without starting the GUI.
