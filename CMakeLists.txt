@@ -17,6 +17,7 @@ add_compile_options($<$<CXX_COMPILER_ID:MSVC>:/utf-8>)
 
 add_library(converter_core
   src/converter_core/Conversion.cpp
+  src/converter_core/DrawingPreview.cpp
   src/converter_core/XyzWriter.cpp
 )
 target_include_directories(converter_core PUBLIC src/converter_core/include)
@@ -79,8 +80,8 @@ add_executable(dgm2xyz WIN32
   src/app_win32/main.cpp
 )
 target_link_libraries(dgm2xyz PRIVATE converter_core cad_dxf cad_dwg comctl32)
-target_link_libraries(dgm2xyz PRIVATE comdlg32 shell32)
-target_compile_definitions(dgm2xyz PRIVATE UNICODE _UNICODE WIN32_LEAN_AND_MEAN NOMINMAX)
+target_link_libraries(dgm2xyz PRIVATE comdlg32 d2d1 ole32 shell32 uxtheme)
+target_compile_definitions(dgm2xyz PRIVATE UNICODE _UNICODE WIN32_LEAN_AND_MEAN NOMINMAX _WIN32_WINNT=0x0A00)
 
 if(DGM2XYZ_BUILD_TESTS)
   enable_testing()
