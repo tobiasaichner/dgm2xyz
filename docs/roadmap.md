@@ -16,7 +16,8 @@
 
 ## Milestone 2: Minimal Desktop GUI
 
-- Add file selection.
+- Add drag-and-drop file intake.
+- Add file picker fallback.
 - Add batch conversion.
 - Show per-file status and diagnostics.
 - Package a first local build.

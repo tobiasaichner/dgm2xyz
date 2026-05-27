@@ -16,7 +16,8 @@ GUI -> application service -> converter core -> CAD reader adapter
 
 The GUI should stay simple:
 
-- File picker or drag and drop.
+- Drag-and-drop area for one or more supported CAD files.
+- File picker as a secondary input method.
 - Processing list with status per file.
 - Output summary.
 - Settings only when they are required for real workflows.

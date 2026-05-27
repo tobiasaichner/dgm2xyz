@@ -6,7 +6,8 @@
 
 ## Functional Requirements
 
-- Open one or more `.dxf` files from a desktop GUI.
+- Accept one or more `.dxf` files by drag and drop into the desktop GUI.
+- Open one or more `.dxf` files through a file picker as a secondary input method.
 - Detect supported point block objects.
 - Extract point coordinates from each supported object.
 - Write one `.xyz` file beside each input drawing.
@@ -34,5 +35,5 @@
 
 ## Future Requirements
 
-- DWG input support if it can be added without making the application heavy or legally complicated.
+- DWG input support, including drag and drop, if it can be added without making the application heavy or legally complicated.
 - CLI mode for scripting, if useful after the GUI workflow is stable.

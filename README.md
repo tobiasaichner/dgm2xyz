@@ -10,7 +10,7 @@ This repository is in project setup. No converter implementation exists yet.
 
 ## Intended Workflow
 
-1. Select one or more `.dxf` files.
+1. Drag and drop one or more `.dxf` files into the application, or select them with a file picker.
 2. Read supported point block objects from each drawing.
 3. Extract point coordinates and optional point metadata.
 4. Write a `.xyz` file next to the input file.
@@ -30,6 +30,7 @@ The exact column order, decimal precision, coordinate handling, and optional att
 
 - Lightweight native desktop GUI.
 - Fast startup and low memory use.
+- Drag-and-drop file intake as a primary workflow.
 - Batch-friendly file processing.
 - Clear error reporting for unsupported or malformed drawings.
 - Conservative file handling: write output beside the input DXF and do not modify the source drawing.
