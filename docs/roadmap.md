@@ -31,6 +31,6 @@
 
 ## Later
 
-- Investigate DWG support.
+- Harden DWG support against real sample files.
 - Consider CLI mode.
 - Add installer or portable distribution.

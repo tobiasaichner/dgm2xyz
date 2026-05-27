@@ -1,0 +1,32 @@
+{
+  "version": 6,
+  "configurePresets": [
+    {
+      "name": "vs2022-libredwg",
+      "displayName": "Visual Studio 2022 with local vcpkg LibreDWG",
+      "generator": "Visual Studio 17 2022",
+      "binaryDir": "${sourceDir}/build-libredwg",
+      "cacheVariables": {
+        "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/build/vcpkg/scripts/buildsystems/vcpkg.cmake",
+        "DGM2XYZ_LIBREDWG": "ON"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "release-libredwg",
+      "configurePreset": "vs2022-libredwg",
+      "configuration": "Release"
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "release-libredwg",
+      "configurePreset": "vs2022-libredwg",
+      "configuration": "Release",
+      "output": {
+        "outputOnFailure": true
+      }
+    }
+  ]
+}

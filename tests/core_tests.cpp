@@ -1,4 +1,5 @@
 #include "dgm2xyz/Conversion.h"
+#include "dgm2xyz/DwgPointReader.h"
 #include "dgm2xyz/DxfPointReader.h"
 #include "dgm2xyz/XyzWriter.h"
 
@@ -6,9 +7,19 @@
 #include <filesystem>
 #include <fstream>
 #include <sstream>
+#include <set>
 #include <string>
 
 namespace {
+
+class FakeReader final : public dgm2xyz::CadPointReader {
+public:
+  dgm2xyz::ReadResult readPoints(const std::filesystem::path&) const override {
+    dgm2xyz::ReadResult result;
+    result.points.push_back(dgm2xyz::Point{7.0, 8.0, 9.0, ""});
+    return result;
+  }
+};
 
 std::filesystem::path tempDir() {
   auto path = std::filesystem::temp_directory_path() / "dgm2xyz_tests";
@@ -70,14 +81,52 @@ void testInsertEntityParsing() {
   assert(readFile(tempDir() / "insert.xyz") == "100.000 200.000 12.500\n");
 }
 
-void testUnsupportedDwg() {
+void testSelectedSourceExport() {
+  const auto inputPath = tempDir() / "selected.dxf";
+  const auto outputPath = tempDir() / "selected.xyz";
+  std::filesystem::remove(outputPath);
+
+  const std::vector<dgm2xyz::Point> points{
+      dgm2xyz::Point{1.0, 2.0, 3.0, "POINT"},
+      dgm2xyz::Point{4.0, 5.0, 6.0, "INSERT: HEIGHT"},
+  };
+
+  const auto result = dgm2xyz::exportPoints(inputPath, points, std::set<std::string>{"INSERT: HEIGHT"});
+  assert(result.status == dgm2xyz::ConversionStatus::Succeeded);
+  assert(readFile(outputPath) == "4.000 5.000 6.000\n");
+}
+
+void testSelectedSourceExportRequiresSelection() {
+  const auto inputPath = tempDir() / "not_selected.dxf";
+  const auto outputPath = tempDir() / "not_selected.xyz";
+  std::filesystem::remove(outputPath);
+
+  const std::vector<dgm2xyz::Point> points{
+      dgm2xyz::Point{1.0, 2.0, 3.0, "POINT"},
+  };
+
+  const auto result = dgm2xyz::exportPoints(inputPath, points, std::set<std::string>{"INSERT: HEIGHT"});
+  assert(result.status == dgm2xyz::ConversionStatus::Failed);
+  assert(!std::filesystem::exists(outputPath));
+}
+
+void testDwgExtensionDelegatesToReader() {
   const auto inputPath = tempDir() / "drawing.dwg";
-  std::filesystem::remove(tempDir() / "drawing.xyz");
   writeFile(inputPath, "not a real dwg");
 
-  const auto result = dgm2xyz::convertFile(inputPath, dgm2xyz::DxfPointReader{});
-  assert(result.status == dgm2xyz::ConversionStatus::Unsupported);
-  assert(!std::filesystem::exists(tempDir() / "drawing.xyz"));
+  const auto result = dgm2xyz::convertFile(inputPath, FakeReader{});
+  assert(result.status == dgm2xyz::ConversionStatus::Succeeded);
+  assert(readFile(tempDir() / "drawing.xyz") == "7.000 8.000 9.000\n");
+}
+
+void testDwgReaderReturnsDiagnosticWhenLibreDwgIsNotBuilt() {
+  const auto inputPath = tempDir() / "missing_libredwg.dwg";
+  writeFile(inputPath, "not a real dwg");
+
+  const auto result = dgm2xyz::DwgPointReader{}.readPoints(inputPath);
+  if (result.hasErrors()) {
+    assert(!result.diagnostics.empty());
+  }
 }
 
 } // namespace
@@ -88,6 +137,9 @@ int main() {
   testEmptyPointResultDoesNotCreateOutput();
   testPointEntityParsing();
   testInsertEntityParsing();
-  testUnsupportedDwg();
+  testSelectedSourceExport();
+  testSelectedSourceExportRequiresSelection();
+  testDwgExtensionDelegatesToReader();
+  testDwgReaderReturnsDiagnosticWhenLibreDwgIsNotBuilt();
   return 0;
 }

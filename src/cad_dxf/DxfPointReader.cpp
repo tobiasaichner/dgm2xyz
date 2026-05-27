@@ -6,6 +6,7 @@
 #include <fstream>
 #include <optional>
 #include <sstream>
+#include <utility>
 
 namespace dgm2xyz {
 namespace {
@@ -127,7 +128,8 @@ void finishEntity(const EntityState& entity,
     return;
   }
 
-  result.points.push_back(Point{*entity.x, *entity.y, entity.z, entity.name});
+  const auto source = entity.type == "INSERT" ? "INSERT: " + entity.name : "POINT";
+  result.points.push_back(Point{*entity.x, *entity.y, entity.z, source});
 }
 
 } // namespace

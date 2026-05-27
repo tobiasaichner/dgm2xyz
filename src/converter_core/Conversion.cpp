@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <cctype>
 #include <exception>
+#include <set>
 #include <sstream>
 
 namespace dgm2xyz {
@@ -42,15 +43,9 @@ ConversionResult convertFile(const std::filesystem::path& inputPath, const CadPo
   result.outputPath = defaultOutputPath(inputPath);
 
   const auto extension = lowerExtension(inputPath);
-  if (extension == ".dwg") {
+  if (extension != ".dxf" && extension != ".dwg") {
     result.status = ConversionStatus::Unsupported;
-    appendDiagnostic(result.diagnostics, DiagnosticSeverity::Error, "DWG input is not supported yet.");
-    return result;
-  }
-
-  if (extension != ".dxf") {
-    result.status = ConversionStatus::Unsupported;
-    appendDiagnostic(result.diagnostics, DiagnosticSeverity::Error, "Only DXF files are supported.");
+    appendDiagnostic(result.diagnostics, DiagnosticSeverity::Error, "Only DXF and DWG files are supported.");
     return result;
   }
 
@@ -77,6 +72,39 @@ ConversionResult convertFile(const std::filesystem::path& inputPath, const CadPo
   }
 
   result.pointCount = readResult.points.size();
+  result.status = ConversionStatus::Succeeded;
+  return result;
+}
+
+ConversionResult exportPoints(const std::filesystem::path& inputPath,
+                              const std::vector<Point>& points,
+                              const std::set<std::string>& selectedSources) {
+  ConversionResult result;
+  result.inputPath = inputPath;
+  result.outputPath = defaultOutputPath(inputPath);
+
+  std::vector<Point> selectedPoints;
+  for (const auto& point : points) {
+    if (selectedSources.contains(point.source)) {
+      selectedPoints.push_back(point);
+    }
+  }
+
+  if (selectedPoints.empty()) {
+    result.status = ConversionStatus::Failed;
+    appendDiagnostic(result.diagnostics, DiagnosticSeverity::Error, "No selected point objects to export.");
+    return result;
+  }
+
+  try {
+    writeXyzFile(result.outputPath, selectedPoints);
+  } catch (const std::exception& exception) {
+    result.status = ConversionStatus::Failed;
+    appendDiagnostic(result.diagnostics, DiagnosticSeverity::Error, exception.what());
+    return result;
+  }
+
+  result.pointCount = selectedPoints.size();
   result.status = ConversionStatus::Succeeded;
   return result;
 }

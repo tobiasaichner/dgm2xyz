@@ -11,6 +11,7 @@ This repository contains the first native Windows implementation skeleton:
 - Native Win32 desktop GUI with drag-and-drop file intake.
 - C++20 converter core with deterministic `.xyz` writing.
 - Internal ASCII DXF reader for initial `POINT` and `INSERT` extraction.
+- Optional GNU LibreDWG-backed DWG reader for initial `POINT` and `INSERT` extraction.
 - Dependency-free core tests.
 
 ## Intended Workflow
@@ -39,7 +40,7 @@ The exact column order, decimal precision, coordinate handling, and optional att
 - Batch-friendly file processing.
 - Clear error reporting for unsupported or malformed drawings.
 - Conservative file handling: write output beside the input DXF and do not modify the source drawing.
-- Implementation choices should keep future DWG support possible, but DXF is the first target.
+- Implementation choices should keep DWG support isolated behind the CAD reader adapter.
 
 ## Documentation
 
@@ -61,7 +62,7 @@ The current implementation stack is:
 - C++20.
 - Native Win32 and Common Controls v6 for the desktop GUI.
 - No external GUI framework.
-- No third-party CAD library yet.
+- GNU LibreDWG for optional DWG input support.
 
 See [architecture notes](docs/architecture.md) for the initial direction.
 
@@ -74,3 +75,41 @@ cmake -S . -B build
 cmake --build build --config Release
 ctest --test-dir build -C Release
 ```
+
+GNU LibreDWG support is controlled by `DGM2XYZ_LIBREDWG`:
+
+```powershell
+cmake -S . -B build -DDGM2XYZ_LIBREDWG=AUTO
+cmake -S . -B build -DDGM2XYZ_LIBREDWG=ON
+cmake -S . -B build -DDGM2XYZ_LIBREDWG=OFF
+```
+
+`AUTO` keeps the app buildable when LibreDWG is not installed. `ON` requires LibreDWG and fails configuration if it cannot be found.
+
+### Build The Shippable App
+
+The app must be shipped together with `libredwg.dll`. The easiest local release flow is:
+
+```powershell
+.\scripts\package_release.ps1
+```
+
+This creates a ready-to-run folder:
+
+```text
+dist\dgm2xyz-win64\
+  dgm2xyz.exe
+  libredwg.dll
+```
+
+Copy that whole folder to another Windows PC. Running only an older `dgm2xyz.exe` from a different build directory can still show “DWG support was not built”.
+
+### Logs
+
+The GUI writes a fresh log file beside the executable on every start:
+
+```text
+dgm2xyz.log
+```
+
+When a DWG import fails, this log includes the LibreDWG error code and decoded error flag names.

@@ -35,11 +35,11 @@ The converter core should:
 
 ### CAD Reader Adapter
 
-Use an adapter around DXF parsing so parser-specific details do not spread through the application.
+Use adapters around CAD parsing so parser-specific details do not spread through the application.
 
 The first implementation uses a small internal ASCII DXF group-code reader for the narrow target case. This avoids early licensing and deployment decisions while real sample files are still unknown.
 
-The first milestone should support DXF only. DWG support should be investigated separately because libraries, licensing, and file compatibility vary significantly.
+DWG input is implemented through a separate GNU LibreDWG adapter. The build can be configured with `DGM2XYZ_LIBREDWG=AUTO`, `ON`, or `OFF`; when LibreDWG is unavailable in `AUTO`, DWG files produce a clear runtime diagnostic instead of breaking the DXF-only build.
 
 ### XYZ Writer
 
@@ -58,5 +58,6 @@ Recommended starting direction:
 - C++20 converter core.
 - Native Win32 GUI.
 - Internal DXF reader until real samples justify a third-party parser.
+- GNU LibreDWG adapter for DWG files.
 
-No external implementation dependency has been selected yet.
+No external GUI dependency has been selected.

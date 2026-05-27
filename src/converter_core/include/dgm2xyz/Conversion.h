@@ -3,6 +3,7 @@
 #include "dgm2xyz/CadPointReader.h"
 
 #include <filesystem>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -27,5 +28,8 @@ struct ConversionResult {
 [[nodiscard]] std::filesystem::path defaultOutputPath(const std::filesystem::path& inputPath);
 
 ConversionResult convertFile(const std::filesystem::path& inputPath, const CadPointReader& reader);
+ConversionResult exportPoints(const std::filesystem::path& inputPath,
+                              const std::vector<Point>& points,
+                              const std::set<std::string>& selectedSources);
 
 } // namespace dgm2xyz
