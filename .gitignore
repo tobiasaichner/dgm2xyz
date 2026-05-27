@@ -1,0 +1,26 @@
+# Build outputs
+build/
+out/
+cmake-build-*/
+
+# CMake
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+compile_commands.json
+
+# IDEs
+.vs/
+.vscode/
+.idea/
+
+# OS files
+Thumbs.db
+.DS_Store
+
+# Generated converter output
+*.xyz
+
+# Local sample data
+samples/private/
+fixtures/private/
