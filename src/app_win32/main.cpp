@@ -16,6 +16,7 @@
 #include <map>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <set>
 #include <sstream>
 #include <string>
@@ -65,6 +66,12 @@ struct FinishedExport {
   dgm2xyz::ConversionResult result;
 };
 
+struct SourceDisplay {
+  std::wstring type;
+  std::wstring block;
+  std::wstring layer;
+};
+
 class AppPointReader final : public dgm2xyz::CadPointReader {
 public:
   dgm2xyz::ReadResult readPoints(const std::filesystem::path& file) const override {
@@ -112,6 +119,45 @@ std::string narrowUtf8(const std::wstring& value) {
 
 std::string narrowUtf8(const std::filesystem::path& path) {
   return narrowUtf8(path.wstring());
+}
+
+std::optional<std::string> valueAfterToken(const std::string& value, const std::string& token) {
+  const auto start = value.find(token);
+  if (start == std::string::npos) {
+    return std::nullopt;
+  }
+
+  auto end = value.find(" | ", start + token.size());
+  if (end == std::string::npos) {
+    end = value.size();
+  }
+
+  return value.substr(start + token.size(), end - (start + token.size()));
+}
+
+SourceDisplay sourceDisplay(const std::string& source) {
+  if (source == "Geländemodell points") {
+    return SourceDisplay{L"Geländemodell points", L"", L"Detected"};
+  }
+
+  if (source.rfind("Block reference", 0) == 0) {
+    return SourceDisplay{
+        L"Block reference",
+        widenUtf8(valueAfterToken(source, "block=").value_or("")),
+        widenUtf8(valueAfterToken(source, "layer=").value_or("")),
+    };
+  }
+
+  if (source.rfind("Layer: ", 0) == 0) {
+    const auto layer = source.substr(7);
+    return SourceDisplay{
+        widenUtf8(layer),
+        L"",
+        widenUtf8(layer),
+    };
+  }
+
+  return SourceDisplay{widenUtf8(source), L"", L""};
 }
 
 const char* severityText(dgm2xyz::DiagnosticSeverity severity) {
@@ -178,6 +224,7 @@ void initializeLogging() {
   {
     std::lock_guard<std::mutex> lock(gLogMutex);
     std::ofstream log(gLogPath, std::ios::out | std::ios::binary);
+    log << "\xEF\xBB\xBF";
     log << timestampText() << " dgm2xyz started\n";
   }
   logLine("Log file: " + narrowUtf8(gLogPath));
@@ -221,6 +268,19 @@ std::map<std::string, std::size_t> pointTypeCounts(const std::vector<dgm2xyz::Po
   return counts;
 }
 
+void logPointTypeCounts(const std::vector<dgm2xyz::Point>& points) {
+  const auto counts = pointTypeCounts(points);
+  if (counts.empty()) {
+    logLine("Preview groups: none");
+    return;
+  }
+
+  logLine("Preview groups:");
+  for (const auto& [source, count] : counts) {
+    logLine("  " + source + " = " + std::to_string(count));
+  }
+}
+
 void populateTypeList(AppState& state, int fileIndex) {
   clearList(state.typeList);
   EnableWindow(state.exportButton, FALSE);
@@ -249,13 +309,16 @@ void populateTypeList(AppState& state, int fileIndex) {
 
   int row = 0;
   for (const auto& [source, count] : counts) {
-    const auto sourceText = widenUtf8(source);
+    const auto display = sourceDisplay(source);
     LVITEMW item{};
     item.mask = LVIF_TEXT;
     item.iItem = row;
-    item.pszText = const_cast<wchar_t*>(sourceText.c_str());
+    item.pszText = const_cast<wchar_t*>(display.type.c_str());
     const int inserted = ListView_InsertItem(state.typeList, &item);
-    setListText(state.typeList, inserted, 1, std::to_wstring(count));
+    setListText(state.typeList, inserted, 1, display.block);
+    setListText(state.typeList, inserted, 2, display.layer);
+    setListText(state.typeList, inserted, 3, std::to_wstring(count));
+    setListText(state.typeList, inserted, 4, widenUtf8(source));
     ListView_SetCheckState(state.typeList, inserted, TRUE);
     ++row;
   }
@@ -291,7 +354,7 @@ std::set<std::string> selectedSources(HWND typeList) {
     }
 
     wchar_t buffer[512]{};
-    ListView_GetItemText(typeList, row, 0, buffer, static_cast<int>(std::size(buffer)));
+    ListView_GetItemText(typeList, row, 4, buffer, static_cast<int>(std::size(buffer)));
     selected.insert(narrowUtf8(std::wstring(buffer)));
   }
   return selected;
@@ -306,6 +369,7 @@ void startPreview(HWND window, int row, std::filesystem::path path) {
     finished->path = path;
     finished->result = AppPointReader{}.readPoints(path);
     logLine("Preview finished: " + narrowUtf8(path) + " | " + std::to_string(finished->result.points.size()) + " point(s)");
+    logPointTypeCounts(finished->result.points);
     logDiagnostics(finished->result.diagnostics);
     PostMessageW(window, kPreviewDoneMessage, 0, reinterpret_cast<LPARAM>(finished.release()));
   }).detach();
@@ -429,8 +493,11 @@ void layoutControls(HWND window, AppState& state) {
   ListView_SetColumnWidth(state.fileList, 0, leftWidth - 250);
   ListView_SetColumnWidth(state.fileList, 1, 85);
   ListView_SetColumnWidth(state.fileList, 2, 150);
-  ListView_SetColumnWidth(state.typeList, 0, rightWidth - 100);
-  ListView_SetColumnWidth(state.typeList, 1, 80);
+  ListView_SetColumnWidth(state.typeList, 0, 150);
+  ListView_SetColumnWidth(state.typeList, 1, 110);
+  ListView_SetColumnWidth(state.typeList, 2, rightWidth - 360);
+  ListView_SetColumnWidth(state.typeList, 3, 70);
+  ListView_SetColumnWidth(state.typeList, 4, 0);
 }
 
 HWND createChild(HWND parent, const wchar_t* className, const wchar_t* text, DWORD style, DWORD exStyle, int id) {
@@ -472,8 +539,11 @@ LRESULT CALLBACK windowProc(HWND window, UINT message, WPARAM wParam, LPARAM lPa
     addColumn(ownedState->fileList, 0, L"File", 300);
     addColumn(ownedState->fileList, 1, L"Status", 85);
     addColumn(ownedState->fileList, 2, L"Result", 150);
-    addColumn(ownedState->typeList, 0, L"Point type", 300);
-    addColumn(ownedState->typeList, 1, L"Count", 80);
+    addColumn(ownedState->typeList, 0, L"Point type", 150);
+    addColumn(ownedState->typeList, 1, L"Block", 110);
+    addColumn(ownedState->typeList, 2, L"Layer", 220);
+    addColumn(ownedState->typeList, 3, L"Count", 70);
+    addColumn(ownedState->typeList, 4, L"Source", 0);
     EnableWindow(ownedState->exportButton, FALSE);
 
     DragAcceptFiles(window, TRUE);

@@ -81,6 +81,51 @@ void testInsertEntityParsing() {
   assert(readFile(tempDir() / "insert.xyz") == "100.000 200.000 12.500\n");
 }
 
+void testDgmInsertSourceParsing() {
+  const auto inputPath = tempDir() / "dgm_insert.dxf";
+  writeFile(inputPath, minimalDxfWithEntity("0\nINSERT\n8\nGeländemodell_ALS-Punkt\n2\nFIGX20\n10\n100\n20\n200\n30\n12.5\n"));
+
+  const auto result = dgm2xyz::DxfPointReader{}.readPoints(inputPath);
+  assert(!result.hasErrors());
+  assert(result.points.size() == 1);
+  assert(result.points.front().source == "Geländemodell points");
+}
+
+void testDgmInsertSourceParsingIgnoresLayer() {
+  const auto inputPath = tempDir() / "dgm_insert_other_layer.dxf";
+  writeFile(inputPath, minimalDxfWithEntity("0\nINSERT\n8\nAnotherLayer\n2\nFIGX20\n10\n100\n20\n200\n30\n12.5\n"));
+
+  const auto result = dgm2xyz::DxfPointReader{}.readPoints(inputPath);
+  assert(!result.hasErrors());
+  assert(result.points.size() == 1);
+  assert(result.points.front().source == "Geländemodell points");
+}
+
+void testLargestGenericBlockGroupBecomesGelaendemodell() {
+  const auto inputPath = tempDir() / "largest_dgm.dxf";
+  writeFile(inputPath,
+            minimalDxfWithEntity("0\nINSERT\n8\nB\n2\nF\n10\n1\n20\n1\n30\n1\n"
+                                 "0\nINSERT\n8\nB\n2\nF\n10\n2\n20\n2\n30\n2\n"
+                                 "0\nINSERT\n8\nK\n2\nF\n10\n3\n20\n3\n30\n3\n"));
+
+  const auto result = dgm2xyz::DxfPointReader{}.readPoints(inputPath);
+  assert(!result.hasErrors());
+  assert(result.points.size() == 3);
+  assert(result.points[0].source == "Geländemodell points");
+  assert(result.points[1].source == "Geländemodell points");
+  assert(result.points[2].source == "Layer: K");
+}
+
+void testGenericInsertSourceIsDescriptive() {
+  const auto inputPath = tempDir() / "generic_insert.dxf";
+  writeFile(inputPath, minimalDxfWithEntity("0\nINSERT\n8\nB\n2\nG\n10\n100\n20\n200\n30\n12.5\n"));
+
+  const auto result = dgm2xyz::DxfPointReader{}.readPoints(inputPath);
+  assert(!result.hasErrors());
+  assert(result.points.size() == 1);
+  assert(result.points.front().source == "Geländemodell points");
+}
+
 void testSelectedSourceExport() {
   const auto inputPath = tempDir() / "selected.dxf";
   const auto outputPath = tempDir() / "selected.xyz";
@@ -137,6 +182,10 @@ int main() {
   testEmptyPointResultDoesNotCreateOutput();
   testPointEntityParsing();
   testInsertEntityParsing();
+  testDgmInsertSourceParsing();
+  testDgmInsertSourceParsingIgnoresLayer();
+  testLargestGenericBlockGroupBecomesGelaendemodell();
+  testGenericInsertSourceIsDescriptive();
   testSelectedSourceExport();
   testSelectedSourceExportRequiresSelection();
   testDwgExtensionDelegatesToReader();

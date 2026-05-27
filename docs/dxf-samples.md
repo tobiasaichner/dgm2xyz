@@ -15,7 +15,20 @@ Real sample files are needed before implementation decisions become reliable.
 
 | Sample | Source | Block name | Height source | Expected columns | Can commit? |
 | --- | --- | --- | --- | --- | --- |
-| TBD | TBD | TBD | TBD | `x y z` | TBD |
+| Generated DGM point | User screenshot | `FIGX20` | Block insertion Z / `Hoehe` attribute | `x y z` | TBD |
+
+## Known Point Types
+
+### Generated DGM Points
+
+Generated DGM points are represented as block references:
+
+- Block name pattern: `FIGX...`, for example `FIGX20`
+- Layer: variable; examples include `Geländemodell_ALS-Punkt`, but DGM detection must not depend on the layer
+- Geometry: insertion position X/Y/Z
+- Attribute: `Hoehe`
+
+The implementation groups these as `Geländemodell points` in the GUI preview so one checkbox covers matching DGM point blocks across all layers.
 
 ## Privacy
 

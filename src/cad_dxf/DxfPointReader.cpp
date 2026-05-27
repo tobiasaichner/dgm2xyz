@@ -4,6 +4,7 @@
 #include <charconv>
 #include <cctype>
 #include <fstream>
+#include <map>
 #include <optional>
 #include <sstream>
 #include <utility>
@@ -22,6 +23,7 @@ struct EntityState {
   std::optional<double> y;
   double z = 0.0;
   std::string name;
+  std::string layer;
 };
 
 std::string trim(std::string value) {
@@ -112,6 +114,39 @@ bool isAllowedInsert(const std::vector<std::string>& allowedNames, const std::st
   return std::find(allowedNames.begin(), allowedNames.end(), name) != allowedNames.end();
 }
 
+bool startsWith(const std::string& value, const std::string& prefix) {
+  return value.size() >= prefix.size() && std::equal(prefix.begin(), prefix.end(), value.begin());
+}
+
+bool isDgmBlock(const std::string& blockName) {
+  return startsWith(blockName, "FIGX");
+}
+
+bool isGelaendemodellLayer(const std::string& layer) {
+  return layer.find("Geländemodell") != std::string::npos ||
+         layer.find("Gelaendemodell") != std::string::npos;
+}
+
+std::string insertSource(const EntityState& entity) {
+  const auto blockName = entity.name.empty() ? "(unnamed block)" : entity.name;
+  if (isDgmBlock(blockName) || isGelaendemodellLayer(entity.layer)) {
+    return "Geländemodell points";
+  }
+
+  if (!entity.layer.empty()) {
+    return "Layer: " + entity.layer;
+  }
+
+  return "Block reference | block=" + blockName;
+}
+
+std::string pointSource(const EntityState& entity) {
+  if (!entity.layer.empty()) {
+    return "POINT [" + entity.layer + "]";
+  }
+  return "POINT";
+}
+
 void finishEntity(const EntityState& entity,
                   const std::vector<std::string>& allowedNames,
                   ReadResult& result) {
@@ -128,8 +163,37 @@ void finishEntity(const EntityState& entity,
     return;
   }
 
-  const auto source = entity.type == "INSERT" ? "INSERT: " + entity.name : "POINT";
+  const auto source = entity.type == "INSERT" ? insertSource(entity) : pointSource(entity);
   result.points.push_back(Point{*entity.x, *entity.y, entity.z, source});
+}
+
+void promoteLargestBlockGroupToDgm(ReadResult& result) {
+  std::map<std::string, std::size_t> counts;
+  bool hasDgmGroup = false;
+  for (const auto& point : result.points) {
+    if (point.source == "Geländemodell points") {
+      hasDgmGroup = true;
+    }
+    if (startsWith(point.source, "Layer: ") || startsWith(point.source, "Block reference | ")) {
+      counts[point.source]++;
+    }
+  }
+
+  if (hasDgmGroup || counts.empty()) {
+    return;
+  }
+
+  const auto largest = std::max_element(counts.begin(), counts.end(), [](const auto& left, const auto& right) {
+    return left.second < right.second;
+  });
+
+  for (auto& point : result.points) {
+    if (point.source == largest->first) {
+      point.source = "Geländemodell points";
+    }
+  }
+
+  result.diagnostics.push_back({DiagnosticSeverity::Info, "Classified largest block point group as Geländemodell points."});
 }
 
 } // namespace
@@ -199,6 +263,11 @@ ReadResult DxfPointReader::readPoints(const std::filesystem::path& file) const {
       continue;
     }
 
+    if (pair.code == 8) {
+      current.layer = pair.value;
+      continue;
+    }
+
     if (pair.code == 10 || pair.code == 20 || pair.code == 30) {
       const auto value = parseDouble(pair.value);
       if (!value) {
@@ -220,6 +289,7 @@ ReadResult DxfPointReader::readPoints(const std::filesystem::path& file) const {
     finishEntity(current, allowedInsertBlockNames_, result);
   }
 
+  promoteLargestBlockGroupToDgm(result);
   return result;
 }
 

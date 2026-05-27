@@ -13,6 +13,8 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+add_compile_options($<$<CXX_COMPILER_ID:MSVC>:/utf-8>)
+
 add_library(converter_core
   src/converter_core/Conversion.cpp
   src/converter_core/XyzWriter.cpp
